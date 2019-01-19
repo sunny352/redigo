@@ -18,11 +18,13 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"sync"
@@ -403,6 +405,13 @@ func (c *conn) writeArg(arg interface{}, argumentTypeOK bool) (err error) {
 		}
 	case nil:
 		return c.writeString("")
+	case time.Time:
+		timeBytes, err := arg.MarshalText()
+		if nil != err {
+			return err
+		} else {
+			return c.writeBytes(timeBytes)
+		}
 	case Argument:
 		if argumentTypeOK {
 			return c.writeArg(arg.RedisArg(), false)
@@ -412,12 +421,26 @@ func (c *conn) writeArg(arg interface{}, argumentTypeOK bool) (err error) {
 		fmt.Fprint(&buf, arg)
 		return c.writeBytes(buf.Bytes())
 	default:
-		// This default clause is intended to handle builtin numeric types.
-		// The function should return an error for other types, but this is not
-		// done for compatibility with previous versions of the package.
-		var buf bytes.Buffer
-		fmt.Fprint(&buf, arg)
-		return c.writeBytes(buf.Bytes())
+		switch reflect.ValueOf(arg).Kind() {
+		case reflect.Map:
+			jsonBytes, err := json.Marshal(arg)
+			if nil == err {
+				return c.writeBytes(jsonBytes)
+			} else {
+				return err
+			}
+		case reflect.Struct:
+			jsonBytes, err := json.Marshal(arg)
+			if nil == err {
+				return c.writeBytes(jsonBytes)
+			} else {
+				return err
+			}
+		default:
+			var buf bytes.Buffer
+			fmt.Fprint(&buf, arg)
+			return c.writeBytes(buf.Bytes())
+		}
 	}
 }
 

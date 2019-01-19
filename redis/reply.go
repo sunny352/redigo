@@ -15,9 +15,11 @@
 package redis
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // ErrNil indicates that a reply value is nil.
@@ -371,45 +373,45 @@ func Ints(reply interface{}, err error) ([]int, error) {
 	return result, err
 }
 
-// StringMap is a helper that converts an array of strings (alternating key, value)
+// HashToStringMap is a helper that converts an array of strings (alternating key, value)
 // into a map[string]string. The HGETALL and CONFIG GET commands return replies in this format.
 // Requires an even number of values in result.
-func StringMap(result interface{}, err error) (map[string]string, error) {
+func HashToStringMap(result interface{}, err error) (map[string]string, error) {
 	values, err := Values(result, err)
 	if err != nil {
 		return nil, err
 	}
 	if len(values)%2 != 0 {
-		return nil, errors.New("redigo: StringMap expects even number of values result")
+		return nil, errors.New("redigo: HashToStringMap expects even number of values result")
 	}
 	m := make(map[string]string, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		key, okKey := values[i].([]byte)
 		value, okValue := values[i+1].([]byte)
 		if !okKey || !okValue {
-			return nil, errors.New("redigo: StringMap key not a bulk string value")
+			return nil, errors.New("redigo: HashToStringMap key not a bulk string value")
 		}
 		m[string(key)] = string(value)
 	}
 	return m, nil
 }
 
-// IntMap is a helper that converts an array of strings (alternating key, value)
+// HashToIntMap is a helper that converts an array of strings (alternating key, value)
 // into a map[string]int. The HGETALL commands return replies in this format.
 // Requires an even number of values in result.
-func IntMap(result interface{}, err error) (map[string]int, error) {
+func HashToIntMap(result interface{}, err error) (map[string]int, error) {
 	values, err := Values(result, err)
 	if err != nil {
 		return nil, err
 	}
 	if len(values)%2 != 0 {
-		return nil, errors.New("redigo: IntMap expects even number of values result")
+		return nil, errors.New("redigo: HashToIntMap expects even number of values result")
 	}
 	m := make(map[string]int, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		key, ok := values[i].([]byte)
 		if !ok {
-			return nil, errors.New("redigo: IntMap key not a bulk string value")
+			return nil, errors.New("redigo: HashToIntMap key not a bulk string value")
 		}
 		value, err := Int(values[i+1], nil)
 		if err != nil {
@@ -420,22 +422,22 @@ func IntMap(result interface{}, err error) (map[string]int, error) {
 	return m, nil
 }
 
-// Int64Map is a helper that converts an array of strings (alternating key, value)
+// HashToInt64Map is a helper that converts an array of strings (alternating key, value)
 // into a map[string]int64. The HGETALL commands return replies in this format.
 // Requires an even number of values in result.
-func Int64Map(result interface{}, err error) (map[string]int64, error) {
+func HashToInt64Map(result interface{}, err error) (map[string]int64, error) {
 	values, err := Values(result, err)
 	if err != nil {
 		return nil, err
 	}
 	if len(values)%2 != 0 {
-		return nil, errors.New("redigo: Int64Map expects even number of values result")
+		return nil, errors.New("redigo: HashToInt64Map expects even number of values result")
 	}
 	m := make(map[string]int64, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		key, ok := values[i].([]byte)
 		if !ok {
-			return nil, errors.New("redigo: Int64Map key not a bulk string value")
+			return nil, errors.New("redigo: HashToInt64Map key not a bulk string value")
 		}
 		value, err := Int64(values[i+1], nil)
 		if err != nil {
@@ -476,4 +478,188 @@ func Positions(result interface{}, err error) ([]*[2]float64, error) {
 		positions[i] = &[2]float64{lat, long}
 	}
 	return positions, nil
+}
+
+// added by sai
+func StringMap(result interface{}, err error) (map[string]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		m := make(map[string]string)
+		err = json.Unmarshal(reply, &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case string:
+		m := make(map[string]string)
+		err = json.Unmarshal([]byte(reply), &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case nil:
+		return nil, ErrNil
+	case Error:
+		return nil, reply
+	default:
+		return nil, fmt.Errorf("redigo: unexpected type for StringMap, got type %T", reply)
+	}
+}
+
+// added by sai
+func IntMap(result interface{}, err error) (map[string]int, error) {
+	if err != nil {
+		return nil, err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		m := make(map[string]int)
+		err = json.Unmarshal(reply, &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case string:
+		m := make(map[string]int)
+		err = json.Unmarshal([]byte(reply), &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case nil:
+		return nil, ErrNil
+	case Error:
+		return nil, reply
+	default:
+		return nil, fmt.Errorf("redigo: unexpected type for IntMap, got type %T", reply)
+	}
+}
+
+// added by sai
+func Int64Map(result interface{}, err error) (map[string]int64, error) {
+	if err != nil {
+		return nil, err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		m := make(map[string]int64)
+		err = json.Unmarshal(reply, &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case string:
+		m := make(map[string]int64)
+		err = json.Unmarshal([]byte(reply), &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case nil:
+		return nil, ErrNil
+	case Error:
+		return nil, reply
+	default:
+		return nil, fmt.Errorf("redigo: unexpected type for Int64Map, got type %T", reply)
+	}
+}
+
+// added by sai
+func InterfaceMap(result interface{}, err error) (map[string]interface{}, error) {
+	if err != nil {
+		return nil, err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		m := make(map[string]interface{})
+		err = json.Unmarshal(reply, &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case string:
+		m := make(map[string]interface{})
+		err = json.Unmarshal([]byte(reply), &m)
+		if nil != err {
+			return nil, err
+		} else {
+			return m, nil
+		}
+	case nil:
+		return nil, ErrNil
+	case Error:
+		return nil, reply
+	default:
+		return nil, fmt.Errorf("redigo: unexpected type for InterfaceMap, got type %T", reply)
+	}
+}
+
+// added by sai
+func Object(result interface{}, obj interface{}, err error) error {
+	if err != nil {
+		return err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		err = json.Unmarshal(reply, obj)
+		if nil != err {
+			return err
+		} else {
+			return nil
+		}
+	case string:
+		err = json.Unmarshal([]byte(reply), obj)
+		if nil != err {
+			return err
+		} else {
+			return nil
+		}
+	case nil:
+		return ErrNil
+	case Error:
+		return reply
+	default:
+		return fmt.Errorf("redigo: unexpected type for Object, got type %T", reply)
+	}
+}
+
+// added by sai
+func Time(result interface{}, err error) (time.Time, error) {
+	if err != nil {
+		return time.Time{}, err
+	}
+	switch reply := result.(type) {
+	case []byte:
+		resultTime := time.Time{}
+		err = resultTime.UnmarshalText(reply)
+		if nil != err {
+			return resultTime, err
+		} else {
+			return resultTime, nil
+		}
+	case string:
+		resultTime := time.Time{}
+		err = resultTime.UnmarshalText([]byte(reply))
+		if nil != err {
+			return resultTime, err
+		} else {
+			return resultTime, nil
+		}
+	case nil:
+		return time.Time{}, ErrNil
+	case Error:
+		return time.Time{}, reply
+	default:
+		return time.Time{}, fmt.Errorf("redigo: unexpected type for time.Time, got type %T", reply)
+	}
 }
