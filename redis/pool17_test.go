@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/sunny352/redigo/redis"
 )
 
 func TestWaitPoolGetContext(t *testing.T) {
