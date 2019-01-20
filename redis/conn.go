@@ -436,6 +436,13 @@ func (c *conn) writeArg(arg interface{}, argumentTypeOK bool) (err error) {
 			} else {
 				return err
 			}
+		case reflect.Ptr:
+			jsonBytes, err := json.Marshal(arg)
+			if nil == err {
+				return c.writeBytes(jsonBytes)
+			} else {
+				return err
+			}
 		default:
 			var buf bytes.Buffer
 			fmt.Fprint(&buf, arg)
