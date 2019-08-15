@@ -396,6 +396,27 @@ func HashToStringMap(result interface{}, err error) (map[string]string, error) {
 	return m, nil
 }
 
+// added by sai
+func HashToBytesMap(result interface{}, err error) (map[string][]byte, error) {
+	values, err := Values(result, err)
+	if err != nil {
+		return nil, err
+	}
+	if len(values)%2 != 0 {
+		return nil, errors.New("redigo: HashToStringMap expects even number of values result")
+	}
+	m := make(map[string][]byte, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, okKey := values[i].([]byte)
+		value, okValue := values[i+1].([]byte)
+		if !okKey || !okValue {
+			return nil, errors.New("redigo: HashToStringMap key not a bulk string value")
+		}
+		m[string(key)] = value
+	}
+	return m, nil
+}
+
 // HashToIntMap is a helper that converts an array of strings (alternating key, value)
 // into a map[string]int. The HGETALL commands return replies in this format.
 // Requires an even number of values in result.
